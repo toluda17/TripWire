@@ -5,12 +5,12 @@ Do not edit it by hand. Every row is a validated detection in this repo.
 
 | Tactic | Technique ID | Technique | Detection ID | Title | Status |
 |--------|--------------|-----------|--------------|-------|--------|
-| Credential Access | T1003.001 | OS Credential Dumping: LSASS Memory | TRW-CRED-001 | LSASS Process Access for Credential Dumping | validated |
-| Defense Evasion | T1070.001 | Indicator Removal: Clear Windows Event Logs | TRW-EVAS-001 | Windows Event Log Clearing | validated |
-| Discovery | T1087.002 | Account Discovery: Domain Account | TRW-DISC-001 | Domain Account Discovery via Net / PowerShell | validated |
-| Execution | T1059.001 | Command and Scripting Interpreter: PowerShell | TRW-EXEC-001 | Encoded PowerShell Command Execution | validated |
-| Persistence | T1053.005 | Scheduled Task/Job: Scheduled Task | TRW-PERS-001 | Scheduled Task Creation for Persistence | validated |
-| Persistence | T1136.001 | Create Account: Local Account | TRW-PERS-002 | Local Account Creation | validated |
+| Credential Access | T1003.001 | OS Credential Dumping: LSASS Memory | TRW-CRED-001 | LSASS Process Access for Credential Dumping | testing |
+| Defense Evasion | T1070.001 | Indicator Removal: Clear Windows Event Logs | TRW-EVAS-001 | Windows Event Log Clearing | testing |
+| Discovery | T1087.002 | Account Discovery: Domain Account | TRW-DISC-001 | Domain Account Discovery via Net / PowerShell | testing |
+| Execution | T1059.001 | Command and Scripting Interpreter: PowerShell | TRW-EXEC-001 | Encoded PowerShell Command Execution | testing |
+| Persistence | T1053.005 | Scheduled Task/Job: Scheduled Task | TRW-PERS-001 | Scheduled Task Creation for Persistence | testing |
+| Persistence | T1136.001 | Create Account: Local Account | TRW-PERS-002 | Local Account Creation | testing |
 
 **Total detections:** 6  
 **Tactics covered:** Credential Access, Defense Evasion, Discovery, Execution, Persistence

@@ -1,34 +1,43 @@
 # Tripwire
 
-An adversary emulation and detection engineering lab. I run real attack techniques
-against a Windows/Active Directory lab using Atomic Red Team, generate actual
-telemetry from those executions, then write and validate Splunk detections against
-that real data. Not synthetic examples, not copied rules I can't explain: every
-detection here fired against telemetry I generated myself, and I can talk through
-each one.
+This is a detection engineering lab I'm building to learn how detections actually
+get made: run a real attack technique, look at what it leaves behind in the logs,
+write a Splunk detection for it, and check the detection really fires. I'm using
+Atomic Red Team to run the techniques against a small Windows and Active Directory
+lab, so the telemetry is real rather than something I made up to fit a rule I'd
+already written.
 
-I built this to get hands-on with the detection engineering lifecycle end to end:
-emulate a technique, see what it looks like in the logs, write a detection, prove it
-fires, and document how I'd respond when it does. It sits alongside my cloud attack
-simulation project (CloudSweeper): that one covers AWS, this one covers endpoint and
-Active Directory.
+It's a companion to CloudSweeper, my AWS attack simulation project. That one lives
+in the cloud, this one lives on the endpoint and in AD. Between them I wanted to
+cover both sides, because the internships I'm aiming at ask about both.
 
-## What's in here
+Heads up on status: the repo structure, the detections, the runbook and the
+validator are all written, but I'm still standing up the lab and running the chain
+for real. Until I've done that and added the screenshots, treat the detections as
+drafted-and-ready-to-test, not battle-tested. I'd rather say that than pretend I've
+run something I haven't. See the status note at the bottom.
 
-- **Six validated Splunk detections**, each mapped to a MITRE ATT&CK technique and
-  each tested against emulated telemetry. They live in `detections/`, organised by
-  tactic, as structured YAML with the SPL inside.
-- **A scripted intrusion chain** (`emulation/`) built from Atomic Red Team tests that
-  runs as one coherent attack story from foothold to anti-forensics.
-- **An incident response runbook** (`runbooks/`) covering triage, containment, and
-  evidence collection for the full chain, so the project goes detection-to-response,
-  not just detection-to-alert.
-- **A validator + CI** (`scripts/`, `.github/`) that schema-checks every detection
-  and auto-generates the coverage table, so nothing unmapped or untested merges.
+## What's here
+
+Six Splunk detections, one per step of a single attack chain, each mapped to a
+MITRE ATT&CK technique. They live in `detections/`, sorted by tactic. Each one is a
+YAML file with the SPL inside it plus the metadata that makes it reviewable.
+
+The attack chain itself is in `emulation/`. It's built from Atomic Red Team tests
+and it runs as one story rather than six unrelated techniques.
+
+There's an incident response runbook in `runbooks/` for the whole chain: how I'd
+triage the alerts, contain the host, and collect evidence. I wanted the project to
+go past "an alert fired" into "here's what you do about it," because that's the part
+that actually matters in a SOC.
+
+And there's a small Python validator in `scripts/` with a GitHub Actions workflow
+that runs it on every push. It checks each detection is properly mapped and filled
+out, and it regenerates the coverage table. More on why below.
 
 ## The attack chain
 
-I emulate one realistic intrusion and detect every step of it:
+One intrusion, start to finish, and a detection for every step:
 
 | Step | Technique | ATT&CK ID | Detection |
 |------|-----------|-----------|-----------|
@@ -39,15 +48,23 @@ I emulate one realistic intrusion and detect every step of it:
 | 5 | LSASS credential dumping | T1003.001 | TRW-CRED-001 |
 | 6 | Clear Windows event logs | T1070.001 | TRW-EVAS-001 |
 
-Full step-by-step is in `emulation/attack-chains/intrusion-chain.md`. The
-auto-generated coverage table is in `docs/coverage.md`.
+The idea is a made-up but realistic break-in: get a foothold, look around, dig in so
+you survive a reboot, steal some credentials, then wipe the logs on the way out. The
+step-by-step commands are in `emulation/attack-chains/intrusion-chain.md`.
 
-## How a detection is structured
+Running these in order matters. Six alerts from one machine in a few minutes is a
+much louder signal than any one of them alone, and eventually I want a correlation
+search that raises a single high-priority incident when a few of these fire
+together, instead of six separate alerts nobody has time to read.
 
-Each detection is a YAML file so it's reviewable, diffable, and machine-checkable
-(the same idea as Sigma). Every file carries its ATT&CK mapping, its data source,
-the SPL, known false positives, a link to the response runbook, and validation
-evidence proving it actually fired. Example fields:
+## How a detection is put together
+
+I wrote each detection as a YAML file instead of just saving a search in Splunk. The
+reason is that a file can be reviewed and diffed like code, and it can carry
+everything that matters about the detection in one place: the ATT&CK mapping, the
+data source, the SPL, the false positives I expect, a link to the runbook, and a
+record of whether it's actually been tested. This is the same idea as Sigma. Rough
+shape of a file:
 
 ```yaml
 id: TRW-CRED-001
@@ -64,64 +81,83 @@ validation:
   result: detected
 ```
 
-A detection can't claim `status: validated` unless its recorded result is
-`detected`. The validator enforces that.
+The validator won't let a file say it's `validated` unless its recorded result is
+actually `detected`, so I can't accidentally claim a detection works when I haven't
+proven it. That guard is the whole reason the validator exists.
 
-## Framework alignment
+## Frameworks
 
 ### MITRE ATT&CK
-Every detection maps explicitly to a technique ID (see the table above and
-`docs/coverage.md`). The chain spans five tactics: Execution, Discovery,
-Persistence, Credential Access, and Defense Evasion.
+Every detection points at a specific technique ID (the table above, and the full
+list in `docs/coverage.md`, which the validator generates). The chain touches five
+tactics: Execution, Discovery, Persistence, Credential Access and Defense Evasion.
 
 ### NIST CSF
-This project mostly demonstrates the **Detect** and **Respond** functions.
+This is mostly a Detect and Respond project, and I've tried to be honest about which
+bits it actually shows rather than name-dropping all five functions.
 
-- **Detect (DE).** The detections are continuous security monitoring
-  (DE.CM): I generate adversary telemetry and alert on it. Each rule documents its
-  data source and expected false positives, which is the analysis side of detection
-  (DE.AE, understanding what a detected event actually means).
-- **Respond (RS).** The runbook covers response analysis, mitigation, and
-  communications (RS.AN, RS.MI, RS.CO): how to triage an alert, contain the host and
-  accounts, collect evidence in order of volatility, and hand off.
-- **Identify (ID), lightly.** Choosing which techniques to emulate is a small risk
-  assessment: I picked a chain that reflects common real-world intrusion behaviour
-  rather than random atomics.
+Detect is the core of it. The detections are continuous monitoring of the logs
+(DE.CM), and because each rule writes down its data source and its likely false
+positives, there's a bit of the "understanding what an alert means" side too
+(DE.AE).
 
-The project deliberately stops short of claiming Protect and Recover coverage,
-because a detection lab doesn't meaningfully demonstrate those, and I'd rather scope
-honestly than overclaim.
+Respond is the runbook: triage, containment, evidence collection, handover (RS.AN,
+RS.MI, RS.CO).
+
+There's a little bit of Identify in the sense that picking which six techniques to
+emulate is a small risk decision, I went for a chain that looks like a real
+intrusion rather than a random grab-bag.
+
+I've deliberately not claimed Protect or Recover. A detection lab doesn't really
+demonstrate those, and I'd rather scope it honestly than pad the list.
 
 ## Running it
 
-Lab build (two Windows VMs, Sysmon, Splunk, Atomic Red Team) is documented in
-`docs/lab-setup.md`. Once the lab is up:
+The lab is two Windows VMs plus Sysmon, Splunk and Atomic Red Team. The full build
+is in `docs/lab-setup.md`. Once it's up, you run the chain from the client:
 
 ```powershell
-# On the compromised workstation, elevated PowerShell
-Invoke-AtomicTest T1059.001 -TestNumbers 1   # and so on through the chain
+# elevated PowerShell on the compromised workstation
+Invoke-AtomicTest T1059.001 -TestNumbers 1   # then the rest of the chain
 ```
 
-Then validate the detection files and regenerate the coverage table:
+And to check the detection files and rebuild the coverage table:
 
 ```bash
 python3 scripts/validate_detections.py --coverage
 ```
 
-## Limitations (being honest)
+## Where it falls short
 
-- It's a lab. A real attacker would be facing EDR, and some of these techniques
-  (LSASS access especially) would look different under an EDR that blocks or alters
-  the behaviour. I call this out rather than pretending the lab is production.
-- The detections are tuned for my lab's sourcetypes and a fairly clean baseline. In a
-  noisy real environment they'd need the allowlisting each rule's `false_positives`
-  section describes.
-- Six techniques is a slice, not full coverage. It's a coherent slice chosen to tell
-  one story well.
+It's a lab, so I want to be straight about the limits. A real attacker here would be
+up against EDR, and some of these techniques (the LSASS one especially) would look
+different or get blocked outright under a proper endpoint product. My lab has that
+turned off so I can actually generate the telemetry, which is fine for learning but
+isn't the real world.
 
-## About
+The detections are also tuned for my lab, which is quiet and clean. Drop them into a
+noisy real network and they'd need the allowlisting each rule describes in its
+false_positives section before they'd be usable.
 
-Built by Toluwani Ashiru, second-year Computing Science student at the University of
-Glasgow, holder of CySA+, and a DEATHCon scholarship attendee. I wanted a project I
-could speak to line by line in an interview for a SOC analyst or detection
-engineering role, and this is it.
+And six techniques is a slice, not coverage. I picked a slice that tells one story
+well rather than trying to do everything badly.
+
+## Status
+
+Written and ready to test:
+- all six detection files, mapped and filled out
+- the emulation chain
+- the runbook
+- the validator and CI
+
+Still to do:
+- build the lab and run the chain for real
+- confirm each detection fires and capture screenshots into `docs/screenshots/`
+- flip the detection status from testing to validated once I've seen them fire
+
+## About me
+
+I'm Toluwani Ashiru, a second-year Computing Science student at Glasgow. I've got
+CySA+ and went to DEATHCon on a scholarship. I built this because I wanted a project
+I could sit in an interview and explain properly, every file, not just point at a
+repo and hope nobody asks how it works.

@@ -1,6 +1,6 @@
 id: TRW-PERS-002
 title: Local Account Creation
-status: validated
+status: testing
 author: Toluwani Ashiru
 created: 2026-07-01
 description: >
@@ -37,7 +37,8 @@ response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
 validation:
   atomic_test: emulation/attack-chains/intrusion-chain.md#step-4
   emulated_on: 2026-07-01
-  result: detected
+  result: not_yet_tested
   notes: >
-    Fired on Invoke-Atomic T1136.001-1 (net user /add). Event 4720 captured the new
-    account and the standard user that created it.
+    Target test is Invoke-Atomic T1136.001-1 (net user /add). I expect event 4720
+    to capture the new account and the standard user that created it. To confirm
+    once the lab is up.

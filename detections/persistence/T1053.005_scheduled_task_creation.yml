@@ -1,6 +1,6 @@
 id: TRW-PERS-001
 title: Scheduled Task Creation for Persistence
-status: validated
+status: testing
 author: Toluwani Ashiru
 created: 2026-07-01
 description: >
@@ -45,7 +45,8 @@ response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
 validation:
   atomic_test: emulation/attack-chains/intrusion-chain.md#step-3
   emulated_on: 2026-07-01
-  result: detected
+  result: not_yet_tested
   notes: >
-    Fired on Invoke-Atomic T1053.005-1. Both the Sysmon schtasks process event and
-    Security 4698 appeared, confirming the dual-source approach works.
+    Target test is Invoke-Atomic T1053.005-1. I expect both the Sysmon schtasks
+    process event and Security 4698, which is the point of the dual-source
+    approach. To confirm once the lab is up.

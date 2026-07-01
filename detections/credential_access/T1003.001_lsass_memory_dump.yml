@@ -1,6 +1,6 @@
 id: TRW-CRED-001
 title: LSASS Process Access for Credential Dumping
-status: validated
+status: testing
 author: Toluwani Ashiru
 created: 2026-07-01
 description: >
@@ -40,8 +40,9 @@ response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
 validation:
   atomic_test: emulation/attack-chains/intrusion-chain.md#step-5
   emulated_on: 2026-07-01
-  result: detected
+  result: not_yet_tested
   notes: >
-    Fired on Invoke-Atomic T1003.001-3 (procdump on lsass). GrantedAccess 0x1fffff
-    observed. Note Sysmon config must not exclude lsass ProcessAccess for this to
-    work; see docs/lab-setup.md.
+    Target test is Invoke-Atomic T1003.001-3 (procdump on lsass). I expect
+    GrantedAccess 0x1fffff. Important: the Sysmon config must not exclude lsass
+    ProcessAccess or this never fires, see docs/lab-setup.md. To confirm once the
+    lab is up.

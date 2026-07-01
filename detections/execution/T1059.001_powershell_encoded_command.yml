@@ -1,6 +1,6 @@
 id: TRW-EXEC-001
 title: Encoded PowerShell Command Execution
-status: validated
+status: testing
 author: Toluwani Ashiru
 created: 2026-07-01
 description: >
@@ -40,8 +40,8 @@ response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
 validation:
   atomic_test: emulation/attack-chains/intrusion-chain.md#step-1
   emulated_on: 2026-07-01
-  result: detected
+  result: not_yet_tested
   notes: >
-    Fired on Invoke-Atomic T1059.001-1. The Base64 payload decoded to a benign
-    Write-Host, but the point is the detection triggers on the encoding pattern,
-    not the payload.
+    Target test is Invoke-Atomic T1059.001-1. The Base64 payload decodes to a
+    benign Write-Host, which is fine because the detection is meant to trigger on
+    the encoding pattern, not the payload. To confirm once the lab is up.

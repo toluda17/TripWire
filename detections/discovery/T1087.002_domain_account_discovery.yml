@@ -1,6 +1,6 @@
 id: TRW-DISC-001
 title: Domain Account Discovery via Net / PowerShell
-status: validated
+status: testing
 author: Toluwani Ashiru
 created: 2026-07-01
 description: >
@@ -49,7 +49,8 @@ response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
 validation:
   atomic_test: emulation/attack-chains/intrusion-chain.md#step-2
   emulated_on: 2026-07-01
-  result: detected
+  result: not_yet_tested
   notes: >
-    Fired on Invoke-Atomic T1087.002-1 (net group "Domain Admins" /domain) run
-    from the compromised workstation as the standard user.
+    Target test is Invoke-Atomic T1087.002-1 (net group "Domain Admins" /domain),
+    run from the compromised workstation as the standard user. To confirm once the
+    lab is up.
