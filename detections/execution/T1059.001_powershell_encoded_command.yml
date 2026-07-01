@@ -1,0 +1,47 @@
+id: TRW-EXEC-001
+title: Encoded PowerShell Command Execution
+status: validated
+author: Toluwani Ashiru
+created: 2026-07-01
+description: >
+  Detects PowerShell executed with an encoded command payload (-EncodedCommand
+  and its abbreviations). Attackers Base64-encode PowerShell to hide the real
+  command from casual log review and to defeat brittle keyword matching. Almost
+  no legitimate interactive use passes a Base64 blob on the command line, so on
+  a normal endpoint this is high signal.
+
+mitre:
+  tactic: Execution
+  technique_id: T1059.001
+  technique_name: "Command and Scripting Interpreter: PowerShell"
+
+data_source:
+  log_source: Sysmon
+  event_id: 1
+  channel: "Microsoft-Windows-Sysmon/Operational"
+
+detection:
+  spl: >
+    index=win sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
+    EventCode=1
+    (Image="*\\powershell.exe" OR Image="*\\pwsh.exe" OR OriginalFileName="PowerShell.EXE")
+    CommandLine IN ("*-enc *","*-encodedcommand *","*-ec *","*-e *")
+    | eval user=coalesce(User,"unknown")
+    | table _time host user Image CommandLine ParentImage
+    | sort - _time
+
+false_positives:
+  - Some legitimate management or deployment tooling (SCCM, certain installers) can
+    invoke encoded PowerShell. Baseline your own environment and allowlist known
+    parent processes rather than deleting the rule.
+
+response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
+
+validation:
+  atomic_test: emulation/attack-chains/intrusion-chain.md#step-1
+  emulated_on: 2026-07-01
+  result: detected
+  notes: >
+    Fired on Invoke-Atomic T1059.001-1. The Base64 payload decoded to a benign
+    Write-Host, but the point is the detection triggers on the encoding pattern,
+    not the payload.

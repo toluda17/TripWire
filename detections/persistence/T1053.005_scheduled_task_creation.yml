@@ -1,0 +1,51 @@
+id: TRW-PERS-001
+title: Scheduled Task Creation for Persistence
+status: validated
+author: Toluwani Ashiru
+created: 2026-07-01
+description: >
+  Detects creation of a scheduled task via schtasks.exe or the PowerShell
+  scheduled task cmdlets. Scheduled tasks are a durable, reboot-surviving way for
+  an attacker to keep code running. This rule watches both the process-creation
+  path (Sysmon EID 1 for schtasks /create) and the dedicated task-registration
+  event so we still catch it if the attacker uses the COM/PowerShell route
+  instead of the command line.
+
+mitre:
+  tactic: Persistence
+  technique_id: T1053.005
+  technique_name: "Scheduled Task/Job: Scheduled Task"
+
+data_source:
+  log_source: Sysmon + Windows Security
+  event_id: 1, 4698
+  channel: "Microsoft-Windows-Sysmon/Operational, Security"
+
+detection:
+  spl: >
+    (
+      index=win sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
+      EventCode=1 Image="*\\schtasks.exe" CommandLine="*/create*"
+    )
+    OR (
+      index=win sourcetype="XmlWinEventLog:Security" EventCode=4698
+    )
+    | eval user=coalesce(User,Account_Name,"unknown")
+    | eval task=coalesce(Task_Name,CommandLine)
+    | table _time host user task Image ParentImage
+    | sort - _time
+
+false_positives:
+  - Software installers and legitimate admin automation create tasks. Build an
+    allowlist of expected task names and expected creating accounts; alert on the
+    exceptions.
+
+response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
+
+validation:
+  atomic_test: emulation/attack-chains/intrusion-chain.md#step-3
+  emulated_on: 2026-07-01
+  result: detected
+  notes: >
+    Fired on Invoke-Atomic T1053.005-1. Both the Sysmon schtasks process event and
+    Security 4698 appeared, confirming the dual-source approach works.

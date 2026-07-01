@@ -1,0 +1,49 @@
+id: TRW-EVAS-001
+title: Windows Event Log Clearing
+status: validated
+author: Toluwani Ashiru
+created: 2026-07-01
+description: >
+  Detects clearing of Windows event logs, a defense-evasion move to destroy the
+  very evidence a defender needs. The clearing action itself generates a signal:
+  Security event 1102 (audit log cleared) and System event 104 (a log was
+  cleared). We also watch for wevtutil cl on the command line. Because the whole
+  point of this technique is to remove evidence, these events should be treated as
+  high priority and forwarded off-host in near real time so they survive.
+
+mitre:
+  tactic: Defense Evasion
+  technique_id: T1070.001
+  technique_name: "Indicator Removal: Clear Windows Event Logs"
+
+data_source:
+  log_source: Windows Security/System + Sysmon
+  event_id: 1102, 104, 1
+  channel: "Security, System, Microsoft-Windows-Sysmon/Operational"
+
+detection:
+  spl: >
+    (index=win sourcetype="XmlWinEventLog:Security" EventCode=1102)
+    OR (index=win sourcetype="XmlWinEventLog:System" EventCode=104)
+    OR (
+      index=win sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
+      EventCode=1 Image="*\\wevtutil.exe" CommandLine="* cl *"
+    )
+    | eval user=coalesce(User,Account_Name,"unknown")
+    | table _time host user EventCode Image CommandLine
+    | sort - _time
+
+false_positives:
+  - Very low. Routine operations rarely clear the Security log. Any hit deserves a
+    look. Occasionally log-management tooling rotates logs, so confirm the account.
+
+response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
+
+validation:
+  atomic_test: emulation/attack-chains/intrusion-chain.md#step-6
+  emulated_on: 2026-07-01
+  result: detected
+  notes: >
+    Fired on Invoke-Atomic T1070.001-2 (wevtutil cl). Both 1102 and the Sysmon
+    wevtutil process event appeared. Confirms forwarding must be near real time,
+    since local logs were wiped immediately after.

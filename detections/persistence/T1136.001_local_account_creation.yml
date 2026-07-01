@@ -1,0 +1,43 @@
+id: TRW-PERS-002
+title: Local Account Creation
+status: validated
+author: Toluwani Ashiru
+created: 2026-07-01
+description: >
+  Detects creation of a new local user account. Attackers add a local account to
+  give themselves a stable, less-scrutinised way back in, sometimes then adding it
+  to a privileged group. This rule uses Windows Security event 4720 (a user
+  account was created), which is the authoritative source, and enriches with the
+  creating account so you can immediately see who made it.
+
+mitre:
+  tactic: Persistence
+  technique_id: T1136.001
+  technique_name: "Create Account: Local Account"
+
+data_source:
+  log_source: Windows Security
+  event_id: 4720
+  channel: "Security"
+
+detection:
+  spl: >
+    index=win sourcetype="XmlWinEventLog:Security" EventCode=4720
+    | rename Target_User_Name as new_account, Subject_User_Name as created_by
+    | table _time host new_account created_by
+    | sort - _time
+
+false_positives:
+  - Legitimate provisioning of local accounts happens, though it is rare on
+    workstations in a domain environment. Pair with 4732 (added to a privileged
+    group) to sharpen. An account created then immediately promoted is a strong chain.
+
+response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
+
+validation:
+  atomic_test: emulation/attack-chains/intrusion-chain.md#step-4
+  emulated_on: 2026-07-01
+  result: detected
+  notes: >
+    Fired on Invoke-Atomic T1136.001-1 (net user /add). Event 4720 captured the new
+    account and the standard user that created it.

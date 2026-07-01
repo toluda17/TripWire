@@ -1,0 +1,23 @@
+# Secrets and local config
+.env
+*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Local lab artifacts I don't want in the repo
+*.evtx
+*.dmp
+raw-logs/
+
+# Keep screenshots (they're proof), but not stray large captures
+*.mp4

@@ -1,0 +1,38 @@
+name: Validate Detections
+
+# Runs on every push and PR. If a detection file is malformed, unmapped, or
+# claims to be validated without evidence, this fails and the change can't merge
+# clean. That's the "detections as code" guardrail.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Validate detection files
+        run: python3 scripts/validate_detections.py
+
+      - name: Check coverage table is up to date
+        run: |
+          python3 scripts/validate_detections.py --coverage
+          if ! git diff --quiet docs/coverage.md; then
+            echo "coverage.md is out of date. Run: python3 scripts/validate_detections.py --coverage"
+            git diff docs/coverage.md
+            exit 1
+          fi

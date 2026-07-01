@@ -1,0 +1,47 @@
+id: TRW-CRED-001
+title: LSASS Process Access for Credential Dumping
+status: validated
+author: Toluwani Ashiru
+created: 2026-07-01
+description: >
+  Detects suspicious access to the LSASS process, the classic credential-dumping
+  step. LSASS holds cached credentials and secrets, so tools like Mimikatz and
+  procdump open a handle to it with high-privilege access rights. This rule uses
+  Sysmon Event 10 (ProcessAccess) and filters on GrantedAccess masks associated
+  with memory reads (0x1010, 0x1410, 0x1438, 0x143a), which is far more precise
+  than alerting on every process that touches LSASS.
+
+mitre:
+  tactic: Credential Access
+  technique_id: T1003.001
+  technique_name: "OS Credential Dumping: LSASS Memory"
+
+data_source:
+  log_source: Sysmon
+  event_id: 10
+  channel: "Microsoft-Windows-Sysmon/Operational"
+
+detection:
+  spl: >
+    index=win sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
+    EventCode=10 TargetImage="*\\lsass.exe"
+    (GrantedAccess="0x1010" OR GrantedAccess="0x1410" OR GrantedAccess="0x1438"
+      OR GrantedAccess="0x143a" OR GrantedAccess="0x1fffff")
+    | table _time host SourceImage TargetImage GrantedAccess CallTrace
+    | sort - _time
+
+false_positives:
+  - A handful of security/EDR and monitoring products legitimately read LSASS.
+    Build an allowlist of expected SourceImage paths (your AV, your EDR) and alert
+    on everything else. The CallTrace field helps confirm unsigned modules.
+
+response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
+
+validation:
+  atomic_test: emulation/attack-chains/intrusion-chain.md#step-5
+  emulated_on: 2026-07-01
+  result: detected
+  notes: >
+    Fired on Invoke-Atomic T1003.001-3 (procdump on lsass). GrantedAccess 0x1fffff
+    observed. Note Sysmon config must not exclude lsass ProcessAccess for this to
+    work; see docs/lab-setup.md.

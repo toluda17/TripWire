@@ -1,0 +1,55 @@
+id: TRW-DISC-001
+title: Domain Account Discovery via Net / PowerShell
+status: validated
+author: Toluwani Ashiru
+created: 2026-07-01
+description: >
+  Detects enumeration of domain users and groups using built-in tooling like
+  net.exe (net user /domain, net group "Domain Admins" /domain) and PowerShell
+  AD cmdlets. This is one of the first things an attacker does after landing on
+  a domain-joined host: work out who the admins are and what the account
+  landscape looks like. The commands are legitimate admin tools, so the signal
+  comes from context (which host, which user, how often) more than the command
+  alone.
+
+mitre:
+  tactic: Discovery
+  technique_id: T1087.002
+  technique_name: "Account Discovery: Domain Account"
+
+data_source:
+  log_source: Sysmon
+  event_id: 1
+  channel: "Microsoft-Windows-Sysmon/Operational"
+
+detection:
+  spl: >
+    index=win sourcetype="XmlWinEventLog:Microsoft-Windows-Sysmon/Operational"
+    EventCode=1
+    (
+      (Image="*\\net.exe" OR Image="*\\net1.exe")
+        AND CommandLine="*/domain*"
+        AND (CommandLine="*user*" OR CommandLine="*group*")
+    )
+    OR (
+      (Image="*\\powershell.exe" OR Image="*\\pwsh.exe")
+        AND (CommandLine="*Get-ADUser*" OR CommandLine="*Get-ADGroupMember*")
+    )
+    | eval user=coalesce(User,"unknown")
+    | table _time host user Image CommandLine ParentImage
+    | sort - _time
+
+false_positives:
+  - Helpdesk and identity admins legitimately run these. Reduce noise by scoping
+    the alert to non-admin workstations, or by alerting only when several discovery
+    techniques fire from the same host in a short window.
+
+response_playbook: runbooks/RB-001_powershell_intrusion_chain.md
+
+validation:
+  atomic_test: emulation/attack-chains/intrusion-chain.md#step-2
+  emulated_on: 2026-07-01
+  result: detected
+  notes: >
+    Fired on Invoke-Atomic T1087.002-1 (net group "Domain Admins" /domain) run
+    from the compromised workstation as the standard user.
