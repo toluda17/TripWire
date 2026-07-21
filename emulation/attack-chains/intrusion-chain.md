@@ -22,14 +22,14 @@ Detection: TRW-EXEC-001
 Invoke-AtomicTest T1059.001 -TestNumbers 1
 ```
 Simulates initial code execution via an obfuscated (Base64-encoded) PowerShell
-command. This is the foothold.
+command (This is the foothold). 
 
 ### Step 2 — Domain account discovery (T1087.002)
 Detection: TRW-DISC-001
 ```powershell
 Invoke-AtomicTest T1087.002 -TestNumbers 1
 ```
-Attacker orients: who are the domain admins, what accounts exist.
+The attacker orients: who are the domain admins, what accounts exist etc.
 
 ### Step 3 — Scheduled task persistence (T1053.005)
 Detection: TRW-PERS-001
@@ -43,7 +43,7 @@ Detection: TRW-PERS-002
 ```powershell
 Invoke-AtomicTest T1136.001 -TestNumbers 1
 ```
-A second, quieter way back in.
+A second, quieter way back in (persistence lol).
 
 ### Step 5 — LSASS credential dumping (T1003.001)
 Detection: TRW-CRED-001
